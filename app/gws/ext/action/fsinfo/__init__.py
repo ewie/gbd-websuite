@@ -2,6 +2,7 @@
 
 import zipfile
 import io
+import os
 import re
 
 import gws
@@ -339,7 +340,21 @@ class Object(gws.common.action.Object):
     def do_read(self, base_dir):
         by_pn = {}
 
-        for path in gws.tools.os2.find_files(base_dir, ext='pdf'):
+        exts = {
+            '':      'application/octet-stream',
+            '.doc':  'application/msword',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.jpg':  'image/jpeg',
+            '.JPG':  'image/jpeg',
+            '.msg':  'application/vnd.ms-outlook',
+            '.pdf':  'application/pdf',
+            '.PDF':  'application/pdf',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            '.XLSX': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            '.zip':  'application/zip'
+        }
+
+        for path in gws.tools.os2.find_files(base_dir):
             rp = gws.tools.os2.rel_path(path, base_dir)
             m = re.match(r'^(\d+)/', rp)
             if not m:
@@ -356,9 +371,10 @@ class Object(gws.common.action.Object):
                 files=[]
             )
             for path in paths:
+                _, ext = os.path.splitext(path)
                 params.files.append(UploadFile(
                     data=gws.read_file_b(path),
-                    mimeType='application/pdf',
+                    mimeType=exts[ext],
                     title='',
                     filename=gws.tools.os2.parse_path(path)['filename'],
                 ))
@@ -386,7 +402,7 @@ class Object(gws.common.action.Object):
                     rec = {
                         'pn': p.personUid,
                         'title': f.title,
-                        'mimetype': 'application/pdf',  ## @TODO
+                        'mimetype': f.mimeType,
                         'username': user_uid,
                         'data': f.data,
                         'filename': f.filename,
@@ -400,7 +416,7 @@ class Object(gws.common.action.Object):
                         with_id=True
                     )
 
-                    gws.log.info(f'INSERT pn={p.personUid!r} file={f.filename!r} uid={uid!r}')
+                    gws.log.info(f'INSERT pn={p.personUid!r} file={f.filename!r} uid={uid!r} mimeType={f.mimeType!r}')
                     uids.append(uid)
 
         return uids
